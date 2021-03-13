@@ -53,8 +53,8 @@ class _MyHomePageState extends State<MyHomePage> {
   void _irc() async {
     if (streamState) return;
     FlutterTts flutterTts = FlutterTts();
-    await flutterTts.setLanguage("ja-JP");
-    // await flutterTts.setLanguage("en-US");
+    // await flutterTts.setLanguage("ja-JP");
+    await flutterTts.setLanguage("en-US");
     await flutterTts.setSpeechRate(0.6);
 
     WebSocket.connect('wss://irc-ws.chat.twitch.tv:443').then((ws) {
@@ -112,6 +112,9 @@ class _MyHomePageState extends State<MyHomePage> {
       subsc.onDone(() {
         print('done');
         print('try to recco');
+        setState(() {
+          this.streamState = false;
+        });
         _irc();
       });
 
