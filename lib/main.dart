@@ -93,6 +93,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
       channel.stream.handleError((error) {
         print('error' + error);
+        this.messages.insert(0, 'ERROR: ' + error.toString());
       });
 
       // ignore: cancel_subscriptions
@@ -100,6 +101,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
       subsc.onError((handleError) {
         print('error' + handleError.toString());
+        this.messages.insert(0, 'ERROR: ' + handleError.toString());
       });
 
       subsc.onData((message) async {
@@ -172,6 +174,10 @@ class _MyHomePageState extends State<MyHomePage> {
       channel.sink.add('PASS oauth:' + _accessToken);
       channel.sink.add('NICK bot');
       channel.sink.add('JOIN #' + this._targetChannelController.text);
+
+      setState(() {
+        this.messages.insert(0, 'SYSTEM INFO: JOINED '+ this._targetChannelController.text);
+      });
     });
   }
 
