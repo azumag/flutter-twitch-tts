@@ -8,6 +8,7 @@ import 'package:twitch_tts/configPage.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:admob_flutter/admob_flutter.dart';
 
 void main() {
   runApp(MyApp());
@@ -49,6 +50,8 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
+    WidgetsFlutterBinding.ensureInitialized();
+    Admob.initialize();
     if (Platform.isAndroid) WebView.platform = SurfaceAndroidWebView();
     if (Platform.isIOS) _iOSSetUp();
     setState(() {
@@ -58,6 +61,8 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _iOSSetUp() async {
+    await Admob.requestTrackingAuthorization();
+
     flutterTts = FlutterTts();
     await flutterTts
         .setIosAudioCategory(IosTextToSpeechAudioCategory.playAndRecord, [
@@ -176,9 +181,41 @@ class _MyHomePageState extends State<MyHomePage> {
       channel.sink.add('JOIN #' + this._targetChannelController.text);
 
       setState(() {
-        this.messages.insert(0, 'SYSTEM INFO: JOINED '+ this._targetChannelController.text);
+        this.messages.insert(
+            0, 'SYSTEM INFO: JOINED ' + this._targetChannelController.text);
       });
     });
+  }
+
+  String getBannerAdUnitId() {
+    if (Platform.isIOS) {
+      return 'ca-app-pub-3940256099942544/2934735716';
+    } else if (Platform.isAndroid) {
+      return 'ca-app-pub-3940256099942544/6300978111';
+    }
+    return null;
+  }
+
+  void handleAdEvent(
+      AdmobAdEvent event, Map<String, dynamic> args, String adType) {
+    switch (event) {
+      case AdmobAdEvent.loaded:
+        print('New Admob $adType Ad loaded!');
+        break;
+      case AdmobAdEvent.opened:
+        print('Admob $adType Ad opened!');
+        break;
+      case AdmobAdEvent.closed:
+        print('Admob $adType Ad closed!');
+        break;
+      case AdmobAdEvent.failedToLoad:
+        print('Admob $adType failed to load. :(');
+        break;
+      case AdmobAdEvent.rewarded:
+        print('rewarded');
+        break;
+      default:
+    }
   }
 
   @override
@@ -190,6 +227,19 @@ class _MyHomePageState extends State<MyHomePage> {
         body: Container(
           padding: const EdgeInsets.all(20),
           child: Column(children: <Widget>[
+            AdmobBanner(
+              adUnitId: getBannerAdUnitId(),
+              adSize: AdmobBannerSize.BANNER,
+              listener: (AdmobAdEvent event, Map<String, dynamic> args) {
+                handleAdEvent(event, args, 'Banner');
+              },
+              onBannerCreated: (AdmobBannerController controller) {
+                // Dispose is called automatically for you when Flutter removes the banner from the widget tree.
+                // Normally you don't need to worry about disposing this yourself, it's handled.
+                // If you need direct access to dispose, this is your guy!
+                // controller.dispose();
+              },
+            ),
             Expanded(
               child: _accessToken == ''
                   ? WebView(
