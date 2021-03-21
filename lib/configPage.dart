@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ConfigPage extends StatefulWidget {
@@ -11,6 +12,8 @@ class ConfigPage extends StatefulWidget {
 /// This is the private State class that goes with MyStatefulWidget.
 class _ConfigPageState extends State<ConfigPage> {
   double _currentSliderValue = 1.0;
+  List<dynamic> languages;
+  String _languageChoice = 'ja-JP';
 
   @override
   void initState() {
@@ -22,7 +25,14 @@ class _ConfigPageState extends State<ConfigPage> {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     setState(() {
       this._currentSliderValue = prefs.getDouble('ttsSpeed') ?? 1.0;
+      this._languageChoice = prefs.getString('languageChoice') ?? 'ja-JP';
     });
+  }
+
+  Future<List<dynamic>> _getLanguageList() async {
+    FlutterTts flutterTts = FlutterTts();
+    final languages = await flutterTts.getLanguages;
+    return languages;
   }
 
   @override
@@ -37,12 +47,12 @@ class _ConfigPageState extends State<ConfigPage> {
           margin: EdgeInsets.all(30),
           child: Column(
             children: [
-              Text('TTS Speed'),
+              Text('TTS Speed: ' + _currentSliderValue.toString()),
               Slider(
                 value: _currentSliderValue,
                 min: 0,
                 max: 2,
-                divisions: 16,
+                divisions: 40,
                 label: _currentSliderValue.toString(),
                 onChanged: (double value) async {
                   final SharedPreferences prefs =
@@ -53,7 +63,34 @@ class _ConfigPageState extends State<ConfigPage> {
                   });
                 },
               ),
-              Text(_currentSliderValue.toString()),
+              Divider(),
+              Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
+                Text('Language Select: '),
+                FutureBuilder(
+                    future: _getLanguageList(),
+                    builder: (context, AsyncSnapshot<List<dynamic>> snapshot) {
+                      if (snapshot.hasData) {
+                        return DropdownButton(
+                            value: _languageChoice,
+                            onChanged: (value) async {
+                              final SharedPreferences prefs =
+                                  await SharedPreferences.getInstance();
+                              prefs.setString('languageChoice', value);
+                              setState(() {
+                                this._languageChoice = value;
+                              });
+                            },
+                            items: snapshot.data
+                                .map((e) => DropdownMenuItem<String>(
+                                      value: e,
+                                      child: Text(e),
+                                    ))
+                                .toList());
+                      } else {
+                        return Text('loading');
+                      }
+                    })
+              ])
             ],
           ),
         ));

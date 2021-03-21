@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+// import 'package:flutter_language_identification/flutter_language_identification.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:twitch_tts/configPage.dart';
 import 'package:web_socket_channel/io.dart';
@@ -43,15 +44,27 @@ class _MyHomePageState extends State<MyHomePage> {
   bool streamState = false;
   bool manualStop = false;
   WebSocket streamSocket;
+  FlutterTts flutterTts;
 
   @override
   void initState() {
     super.initState();
     if (Platform.isAndroid) WebView.platform = SurfaceAndroidWebView();
+    if (Platform.isIOS) _iOSSetUp();
     setState(() {
       this.streamController = StreamController();
     });
     this.streamController.sink.add(this.messages);
+  }
+
+  void _iOSSetUp() async {
+    flutterTts = FlutterTts();
+    await flutterTts
+        .setIosAudioCategory(IosTextToSpeechAudioCategory.playAndRecord, [
+      IosTextToSpeechAudioCategoryOptions.allowBluetooth,
+      IosTextToSpeechAudioCategoryOptions.allowBluetoothA2DP,
+      IosTextToSpeechAudioCategoryOptions.mixWithOthers
+    ]);
   }
 
   void _streamClose() async {
@@ -65,9 +78,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void _irc() async {
     if (streamState) return;
-    FlutterTts flutterTts = FlutterTts();
-    await flutterTts.setLanguage("ja-JP");
-    // await flutterTts.setLanguage("en-US");
+    // FlutterLanguageIdentification languageIdentification =
+    //     FlutterLanguageIdentification();
 
     WebSocket.connect('wss://irc-ws.chat.twitch.tv:443').then((ws) {
       // await flutterTts.setSharedInstance(true);
@@ -103,7 +115,8 @@ class _MyHomePageState extends State<MyHomePage> {
           switch (command) {
             case 'PRIVMSG':
               // tts Speed
-              final SharedPreferences prefs = await SharedPreferences.getInstance();
+              final SharedPreferences prefs =
+                  await SharedPreferences.getInstance();
               final ttsSpeed = prefs.getDouble('ttsSpeed') ?? 0.6;
               await flutterTts.setSpeechRate(ttsSpeed);
 
@@ -114,6 +127,24 @@ class _MyHomePageState extends State<MyHomePage> {
               if (match2 != null && match3 != null) {
                 name = match2.group(1);
                 msg = match3.group(1);
+
+                await flutterTts
+                    .setLanguage(prefs.getString('languageChoice') ?? 'ja-JP');
+                // await languageIdentification.identifyLanguage(msg);
+
+                // languageIdentification.setSuccessHandler((message) {
+                //   print(message);
+                // });
+
+                // languageIdentification.setErrorHandler((message) {
+                //   print(message);
+                // });
+
+                // languageIdentification.setFailedHandler((message) {
+                //   print(message);
+                // });
+
+                // await flutterTts.setLanguage(langIDResult);
                 setState(() {
                   this.messages.insert(0, name + ': ' + msg);
                 });
