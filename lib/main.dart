@@ -10,6 +10,12 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:admob_flutter/admob_flutter.dart';
 
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
+import 'package:url_launcher/url_launcher.dart';
+import 'package:carousel_slider/carousel_slider.dart';
+
 void main() {
   runApp(MyApp());
 }
@@ -23,6 +29,8 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
+      darkTheme: ThemeData.dark(),
+      themeMode: ThemeMode.system,
       home: MyHomePage(title: 'Twitch TTS'),
     );
   }
@@ -52,6 +60,7 @@ class _MyHomePageState extends State<MyHomePage> {
     super.initState();
     WidgetsFlutterBinding.ensureInitialized();
     Admob.initialize();
+    flutterTts = FlutterTts();
     if (Platform.isAndroid) WebView.platform = SurfaceAndroidWebView();
     if (Platform.isIOS) _iOSSetUp();
     setState(() {
@@ -60,10 +69,15 @@ class _MyHomePageState extends State<MyHomePage> {
     this.streamController.sink.add(this.messages);
   }
 
+  Future<Map<String, dynamic>> adInitialize() async {
+    final url = Uri.http('azumag.github.io', '/ad.json');
+    var response = await http.get(url);
+    return Future.value(json.decode(response.body));
+  }
+
   void _iOSSetUp() async {
     await Admob.requestTrackingAuthorization();
 
-    flutterTts = FlutterTts();
     await flutterTts
         .setIosAudioCategory(IosTextToSpeechAudioCategory.playAndRecord, [
       IosTextToSpeechAudioCategoryOptions.allowBluetooth,
@@ -121,11 +135,15 @@ class _MyHomePageState extends State<MyHomePage> {
 
           switch (command) {
             case 'PRIVMSG':
-              // tts Speed
               final SharedPreferences prefs =
                   await SharedPreferences.getInstance();
               final ttsSpeed = prefs.getDouble('ttsSpeed') ?? 0.6;
-              await flutterTts.setSpeechRate(ttsSpeed);
+              print(ttsSpeed);
+              if (Platform.isIOS) {
+                await flutterTts.setSpeechRate(ttsSpeed);
+              } else {
+                flutterTts.setSpeechRate(ttsSpeed);
+              }
 
               RegExp exp2 = new RegExp(r'^:([^ ]+)\!');
               RegExp exp3 = new RegExp(r':(.+)');
@@ -135,8 +153,10 @@ class _MyHomePageState extends State<MyHomePage> {
                 name = match2.group(1);
                 msg = match3.group(1);
 
-                await flutterTts
+                if (Platform.isIOS) {
+                  await flutterTts
                     .setLanguage(prefs.getString('languageChoice') ?? 'ja-JP');
+                }
                 // await languageIdentification.identifyLanguage(msg);
 
                 // languageIdentification.setSuccessHandler((message) {
@@ -156,8 +176,8 @@ class _MyHomePageState extends State<MyHomePage> {
                   this.messages.insert(0, name + ': ' + msg);
                 });
                 // print(name);
-                // print(msg);
                 flutterTts.speak(name + msg);
+                print(msg);
                 // if (result == 1) setState(() => ttsState = TtsState.playing);
               }
               break;
@@ -189,9 +209,11 @@ class _MyHomePageState extends State<MyHomePage> {
 
   String getBannerAdUnitId() {
     if (Platform.isIOS) {
-      return 'ca-app-pub-3940256099942544/2934735716';
+      // return 'ca-app-pub-4857445195385762/4153361605';
+      return 'ca-app-pub-3940256099942544/2934735716'; // test
     } else if (Platform.isAndroid) {
-      return 'ca-app-pub-3940256099942544/6300978111';
+      // return 'ca-app-pub-4857445195385762/2461554721';
+      return 'ca-app-pub-3940256099942544/6300978111'; // test
     }
     return null;
   }
@@ -225,21 +247,54 @@ class _MyHomePageState extends State<MyHomePage> {
           title: Text(widget.title),
         ),
         body: Container(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(10),
           child: Column(children: <Widget>[
-            AdmobBanner(
-              adUnitId: getBannerAdUnitId(),
-              adSize: AdmobBannerSize.BANNER,
-              listener: (AdmobAdEvent event, Map<String, dynamic> args) {
-                handleAdEvent(event, args, 'Banner');
-              },
-              onBannerCreated: (AdmobBannerController controller) {
-                // Dispose is called automatically for you when Flutter removes the banner from the widget tree.
-                // Normally you don't need to worry about disposing this yourself, it's handled.
-                // If you need direct access to dispose, this is your guy!
-                // controller.dispose();
-              },
-            ),
+            FutureBuilder(
+                future: adInitialize(),
+                builder: (BuildContext context,
+                    AsyncSnapshot<Map<String, dynamic>> snapshot) {
+                  if (snapshot.hasData) {
+                    if (snapshot.data['ads'].length == 1) {
+                      final info = snapshot.data['ads'][0];
+                      return GestureDetector(
+                          onTap: () {
+                            launch(info['uri']);
+                          },
+                          child: Image(image: NetworkImage(info['imgURL'])));
+                    } else {
+                      return CarouselSlider(
+                          options: CarouselOptions(
+                              autoPlay: true,
+                              height: 64,
+                              autoPlayInterval: Duration(seconds: 60)),
+                          items: snapshot.data['ads']
+                              .map((info) {
+                                return Builder(
+                                  builder: (context) {
+                                    return Container(
+                                        width:
+                                            MediaQuery.of(context).size.width,
+                                        margin: EdgeInsets.symmetric(
+                                            horizontal: 5.0),
+                                        decoration: BoxDecoration(
+                                            color: Colors.transparent),
+                                        child: GestureDetector(
+                                            onTap: () {
+                                              launch(info['uri']);
+                                            },
+                                            child: Image(
+                                                image: NetworkImage(
+                                                    info['imgURL']))));
+                                  },
+                                );
+                              })
+                              .toList()
+                              .cast<Widget>());
+                    }
+                  } else {
+                    return Text('loading');
+                  }
+                }),
             Expanded(
               child: _accessToken == ''
                   ? WebView(
@@ -279,6 +334,19 @@ class _MyHomePageState extends State<MyHomePage> {
                       },
                     ),
             ),
+            AdmobBanner(
+                adUnitId: getBannerAdUnitId(),
+                adSize: AdmobBannerSize.BANNER,
+                listener: (AdmobAdEvent event, Map<String, dynamic> args) {
+                  handleAdEvent(event, args, 'Banner');
+                },
+                onBannerCreated: (AdmobBannerController controller) {
+                  // Dispose is called automatically for you when Flutter removes the banner from the widget tree.
+                  // Normally you don't need to worry about disposing this yourself, it's handled.
+                  // If you need direct access to dispose, this is your guy!
+                  // controller.dispose();
+                }),
+            Padding(padding: EdgeInsets.all(5)),
             this.streamState
                 ? Container()
                 : TextField(
@@ -320,7 +388,10 @@ class _MyHomePageState extends State<MyHomePage> {
                     tooltip: 'play',
                     child: Icon(Icons.play_arrow),
                     // child: Icon(Icons.stop),
-                  ), // This trailing comma makes auto-formatting nicer for build methods.
+                  ),
+            Padding(
+                padding: EdgeInsets.all(40),
+                child: Container(color: Colors.red))
           ],
         ));
   }

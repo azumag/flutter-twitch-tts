@@ -1,6 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.twitch_tts">
    <application
+        android:usesCleartextTraffic="true"
         android:label="twitch_tts"
         android:icon="@mipmap/ic_launcher">
         <activity

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async';
 
 class ConfigPage extends StatefulWidget {
   const ConfigPage({key}) : super(key: key);
@@ -14,6 +15,8 @@ class _ConfigPageState extends State<ConfigPage> {
   double _currentSliderValue = 1.0;
   List<dynamic> languages;
   String _languageChoice = 'ja-JP';
+  bool _disableSelfAd = false;
+  bool _disableAd = false;
 
   @override
   void initState() {
@@ -63,7 +66,12 @@ class _ConfigPageState extends State<ConfigPage> {
                   });
                 },
               ),
-              Divider(),
+              Divider(
+                height: 20,
+                thickness: 5,
+                indent: 0,
+                endIndent: 0,
+              ),
               Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
                 Text('Language Select: '),
                 FutureBuilder(
@@ -90,7 +98,35 @@ class _ConfigPageState extends State<ConfigPage> {
                         return Text('loading');
                       }
                     })
-              ])
+              ]),
+              Divider(
+                height: 20,
+                thickness: 5,
+                indent: 0,
+                endIndent: 0,
+              ),
+              CheckboxListTile(
+                activeColor: Colors.blue,
+                title: Text('上部広告を外す'),
+                controlAffinity: ListTileControlAffinity.leading,
+                value: _disableSelfAd,
+                onChanged: (value) {
+                  setState(() {
+                    this._disableSelfAd = value;
+                  });
+                },
+              ),
+              CheckboxListTile(
+                activeColor: Colors.blue,
+                title: Text('下部広告を外す'),
+                controlAffinity: ListTileControlAffinity.leading,
+                value: _disableAd,
+                onChanged: (value) {
+                  setState(() {
+                    this._disableAd = value;
+                  });
+                },
+              ),
             ],
           ),
         ));

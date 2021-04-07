@@ -29,6 +29,9 @@ dependencies:
   shared_preferences:
   flutter_language_identification:
   admob_flutter:
+  http:
+  url_launcher:
+  carousel_slider: ^3.0.0
 
 
   # The following adds the Cupertino Icons font to your application.
