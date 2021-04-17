@@ -109,6 +109,10 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
 
   void _irc() async {
     if (streamState) return;
+    // await flutterTts.awaitSpeakCompletion(true);
+    if (Platform.isAndroid) {
+      await flutterTts.setQueueMode(1);
+    }
     // FlutterLanguageIdentification languageIdentification =
     //     FlutterLanguageIdentification();
 
@@ -277,39 +281,41 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                           onTap: () {
                             launch(info['uri']);
                           },
-                          child: 
-                            this._disableSelfAd ? Container() :
-                            Image(image: NetworkImage(info['imgURL'])));
+                          child: this._disableSelfAd
+                              ? Container()
+                              : Image(image: NetworkImage(info['imgURL'])));
                     } else {
-                      return this._disableSelfAd ? Container() :
-                        CarouselSlider(
-                          options: CarouselOptions(
-                              autoPlay: true,
-                              height: 64,
-                              autoPlayInterval: Duration(seconds: 60)),
-                          items: snapshot.data['ads']
-                              .map((info) {
-                                return Builder(
-                                  builder: (context) {
-                                    return Container(
-                                        width:
-                                            MediaQuery.of(context).size.width,
-                                        margin: EdgeInsets.symmetric(
-                                            horizontal: 5.0),
-                                        decoration: BoxDecoration(
-                                            color: Colors.transparent),
-                                        child: GestureDetector(
-                                            onTap: () {
-                                              launch(info['uri']);
-                                            },
-                                            child: Image(
-                                                image: NetworkImage(
-                                                    info['imgURL']))));
-                                  },
-                                );
-                              })
-                              .toList()
-                              .cast<Widget>());
+                      return this._disableSelfAd
+                          ? Container()
+                          : CarouselSlider(
+                              options: CarouselOptions(
+                                  autoPlay: true,
+                                  height: 64,
+                                  autoPlayInterval: Duration(seconds: 60)),
+                              items: snapshot.data['ads']
+                                  .map((info) {
+                                    return Builder(
+                                      builder: (context) {
+                                        return Container(
+                                            width: MediaQuery.of(context)
+                                                .size
+                                                .width,
+                                            margin: EdgeInsets.symmetric(
+                                                horizontal: 5.0),
+                                            decoration: BoxDecoration(
+                                                color: Colors.transparent),
+                                            child: GestureDetector(
+                                                onTap: () {
+                                                  launch(info['uri']);
+                                                },
+                                                child: Image(
+                                                    image: NetworkImage(
+                                                        info['imgURL']))));
+                                      },
+                                    );
+                                  })
+                                  .toList()
+                                  .cast<Widget>());
                     }
                   } else {
                     return Text('loading');
@@ -354,19 +360,20 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                       },
                     ),
             ),
-            this._disableAd ? Container() :
-            AdmobBanner(
-                adUnitId: getBannerAdUnitId(),
-                adSize: AdmobBannerSize.BANNER,
-                listener: (AdmobAdEvent event, Map<String, dynamic> args) {
-                  handleAdEvent(event, args, 'Banner');
-                },
-                onBannerCreated: (AdmobBannerController controller) {
-                  // Dispose is called automatically for you when Flutter removes the banner from the widget tree.
-                  // Normally you don't need to worry about disposing this yourself, it's handled.
-                  // If you need direct access to dispose, this is your guy!
-                  // controller.dispose();
-                }),
+            this._disableAd
+                ? Container()
+                : AdmobBanner(
+                    adUnitId: getBannerAdUnitId(),
+                    adSize: AdmobBannerSize.BANNER,
+                    listener: (AdmobAdEvent event, Map<String, dynamic> args) {
+                      handleAdEvent(event, args, 'Banner');
+                    },
+                    onBannerCreated: (AdmobBannerController controller) {
+                      // Dispose is called automatically for you when Flutter removes the banner from the widget tree.
+                      // Normally you don't need to worry about disposing this yourself, it's handled.
+                      // If you need direct access to dispose, this is your guy!
+                      // controller.dispose();
+                    }),
             Padding(padding: EdgeInsets.all(5)),
             this.streamState
                 ? Container()
@@ -387,13 +394,14 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
             FloatingActionButton(
                 heroTag: 'config',
                 onPressed: () async {
-                  var result = await Navigator.push(
+                  await Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => ConfigPage(),
                       ));
                   // print(result);
-                  final SharedPreferences prefs = await SharedPreferences.getInstance();
+                  final SharedPreferences prefs =
+                      await SharedPreferences.getInstance();
                   setState(() {
                     this._disableAd = prefs.getBool('disableAd') ?? false;
                     this._disableSelfAd =
