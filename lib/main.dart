@@ -45,7 +45,7 @@ class MyHomePage extends StatefulWidget {
   _MyHomePageState createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
+class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   String _accessToken = '';
   StreamController streamController;
   List<String> messages = [];
@@ -54,19 +54,31 @@ class _MyHomePageState extends State<MyHomePage> {
   bool manualStop = false;
   WebSocket streamSocket;
   FlutterTts flutterTts;
+  bool _disableAd = false;
+  bool _disableSelfAd = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsFlutterBinding.ensureInitialized();
     Admob.initialize();
     flutterTts = FlutterTts();
+    setConfigValue();
     if (Platform.isAndroid) WebView.platform = SurfaceAndroidWebView();
     if (Platform.isIOS) _iOSSetUp();
     setState(() {
       this.streamController = StreamController();
     });
     this.streamController.sink.add(this.messages);
+  }
+
+  void setConfigValue() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      this._disableAd = prefs.getBool('disableAd') ?? false;
+      this._disableSelfAd = prefs.getBool('disableSelfAd') ?? false;
+    });
   }
 
   Future<Map<String, dynamic>> adInitialize() async {
@@ -154,8 +166,8 @@ class _MyHomePageState extends State<MyHomePage> {
                 msg = match3.group(1);
 
                 if (Platform.isIOS) {
-                  await flutterTts
-                    .setLanguage(prefs.getString('languageChoice') ?? 'ja-JP');
+                  await flutterTts.setLanguage(
+                      prefs.getString('languageChoice') ?? 'ja-JP');
                 }
                 // await languageIdentification.identifyLanguage(msg);
 
@@ -241,6 +253,11 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    print('state = $state');
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
@@ -260,9 +277,12 @@ class _MyHomePageState extends State<MyHomePage> {
                           onTap: () {
                             launch(info['uri']);
                           },
-                          child: Image(image: NetworkImage(info['imgURL'])));
+                          child: 
+                            this._disableSelfAd ? Container() :
+                            Image(image: NetworkImage(info['imgURL'])));
                     } else {
-                      return CarouselSlider(
+                      return this._disableSelfAd ? Container() :
+                        CarouselSlider(
                           options: CarouselOptions(
                               autoPlay: true,
                               height: 64,
@@ -334,6 +354,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       },
                     ),
             ),
+            this._disableAd ? Container() :
             AdmobBanner(
                 adUnitId: getBannerAdUnitId(),
                 adSize: AdmobBannerSize.BANNER,
@@ -365,12 +386,19 @@ class _MyHomePageState extends State<MyHomePage> {
           children: [
             FloatingActionButton(
                 heroTag: 'config',
-                onPressed: () {
-                  Navigator.push(
+                onPressed: () async {
+                  var result = await Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => ConfigPage(),
                       ));
+                  // print(result);
+                  final SharedPreferences prefs = await SharedPreferences.getInstance();
+                  setState(() {
+                    this._disableAd = prefs.getBool('disableAd') ?? false;
+                    this._disableSelfAd =
+                        prefs.getBool('disableSelfAd') ?? false;
+                  });
                 },
                 tooltip: 'config',
                 child: Icon(Icons.settings)),
@@ -394,5 +422,11 @@ class _MyHomePageState extends State<MyHomePage> {
                 child: Container(color: Colors.red))
           ],
         ));
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 }

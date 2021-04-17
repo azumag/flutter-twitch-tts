@@ -29,6 +29,8 @@ class _ConfigPageState extends State<ConfigPage> {
     setState(() {
       this._currentSliderValue = prefs.getDouble('ttsSpeed') ?? 1.0;
       this._languageChoice = prefs.getString('languageChoice') ?? 'ja-JP';
+      this._disableAd = prefs.getBool('disableAd') ?? false;
+      this._disableSelfAd = prefs.getBool('disableSelfAd') ?? false;
     });
   }
 
@@ -110,7 +112,10 @@ class _ConfigPageState extends State<ConfigPage> {
                 title: Text('上部広告を外す'),
                 controlAffinity: ListTileControlAffinity.leading,
                 value: _disableSelfAd,
-                onChanged: (value) {
+                onChanged: (value) async {
+                  final SharedPreferences prefs =
+                      await SharedPreferences.getInstance();
+                  prefs.setBool('disableSelfAd', value);
                   setState(() {
                     this._disableSelfAd = value;
                   });
@@ -121,7 +126,10 @@ class _ConfigPageState extends State<ConfigPage> {
                 title: Text('下部広告を外す'),
                 controlAffinity: ListTileControlAffinity.leading,
                 value: _disableAd,
-                onChanged: (value) {
+                onChanged: (value) async {
+                  final SharedPreferences prefs =
+                      await SharedPreferences.getInstance();
+                  prefs.setBool('disableAd', value);
                   setState(() {
                     this._disableAd = value;
                   });
